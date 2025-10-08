@@ -43,6 +43,12 @@ If Render's build fails on eventlet, ensure your buildCommand installs setuptool
 buildCommand: pip install 'setuptools>=68.0.0' wheel && pip install -r requirements.txt
 ```
 
+Recommendation: pin the Python runtime to 3.11 in `runtime.txt` to avoid missing distutils in newer Python images on some hosts. For example:
+
+```
+python-3.11.14
+```
+
 ## Notes
 - SQLite is fine for local dev or single-instance deploys, but use Postgres for production.
 - When scaling to multiple instances, configure `REDIS_URL` and the Socket.IO `message_queue`.
