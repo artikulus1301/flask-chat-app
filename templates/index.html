@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minichat</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { 
+            font-family: Arial; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px; 
+            margin: 0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .online-counter {
+            background: #28a745;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        button {
+            padding: 12px 25px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover:not(:disabled) {
+            background: #764ba2;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #chat {
+            background: #f8f9fa;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+            margin: 15px 0;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 8px;
+            background: white;
+        }
+        .user-message {
+            border-left: 4px solid #667eea;
+        }
+        .system-message {
+            background: #e3f2fd;
+            text-align: center;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>💬 Minichat</h2>
+            <div class="online-counter">Онлайн: <span id="onlineCount">0</span></div>
+        </div>
+        
+        <div class="input-group">
+            <input id="username" placeholder="Ваше имя (2-20 символов)" maxlength="20">
+            <button id="joinBtn">Войти в чат</button>
+        </div>
+        
+        <div id="chat"></div>
+        
+        <div class="input-group">
+            <input id="msg" placeholder="Введите сообщение... (до 500 символов)" disabled maxlength="500">
+            <button id="sendBtn" disabled>Отправить</button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        const chat = document.getElementById('chat');
+        let currentUsername = '';
+        let isJoined = false;
+
+        socket.on('connect', () => {
+            addStatus('✅ Подключено к серверу', 'success');
+        });
+
+        socket.on('disconnect', () => {
+            addStatus('❌ Отключено от сервера', 'error');
+        });
+
+        socket.on('join_success', (data) => {
+            currentUsername = data.username;
+            isJoined = true;
+            document.getElementById('username').disabled = true;
+            document.getElementById('joinBtn').disabled = true;
+            document.getElementById('msg').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            addStatus(`✅ Добро пожаловать, ${data.username}!`, 'success');
+            document.getElementById('msg').focus();
+        });
+
+        socket.on('join_error', (data) => {
+            addStatus(`❌ ${data.error}`, 'error');
+        });
+
+        socket.on('new_message', (data) => {
+            addMessage(data.text, data.username, 'user-message', data.timestamp);
+        });
+
+        socket.on('system_message', (data) => {
+            addMessage(data.msg, 'System', 'system-message');
+        });
+
+        socket.on('user_count', (data) => {
+            document.getElementById('onlineCount').textContent = data.count;
+        });
+
+        function joinChat() {
+            const username = document.getElementById('username').value.trim();
+            if (!username) {
+                addStatus('❌ Введите имя', 'error');
+                return;
+            }
+            socket.emit('user_join', { username: username });
+        }
+
+        function sendMessage() {
+            const msgInput = document.getElementById('msg');
+            const message = msgInput.value.trim();
+            if (!message) {
+                addStatus('❌ Введите сообщение', 'error');
+                return;
+            }
+            socket.emit('message', { text: message });
+            msgInput.value = '';
+        }
+
+        function addMessage(text, username, className, timestamp = null) {
+            const div = document.createElement('div');
+            div.className = `message ${className}`;
+            
+            if (!timestamp) timestamp = new Date().toLocaleTimeString();
+            
+            if (className === 'user-message') {
+                div.innerHTML = `<strong>${username}:</strong> ${text} <small>${timestamp}</small>`;
+            } else {
+                div.innerHTML = text;
+            }
+            
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function addStatus(message, type) {
+            const div = document.createElement('div');
+            div.className = `message system-message`;
+            div.style.background = type === 'success' ? '#d4edda' : '#f8d7da';
+            div.style.color = type === 'success' ? '#155724' : '#721c24';
+            div.textContent = message;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        document.getElementById('joinBtn').addEventListener('click', joinChat);
+        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        
+        document.getElementById('username').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') joinChat();
+        });
+        
+        document.getElementById('msg').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
