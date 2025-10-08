@@ -1,7 +1,9 @@
+runtime: python-3.11.14
 services:
   - type: web
     name: flask-chat-app
     env: python
+    runtime: python-3.11.14
     plan: free
     buildCommand: pip install --upgrade pip && pip install 'setuptools>=68.0.0' wheel && pip install -r requirements.txt
     startCommand: gunicorn --worker-class eventlet -w 1 wsgi:app --bind 0.0.0.0:$PORT

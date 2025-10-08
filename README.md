@@ -54,3 +54,14 @@ python-3.11.14
 - When scaling to multiple instances, configure `REDIS_URL` and the Socket.IO `message_queue`.
 
 If you want, I can add example `docker-compose` and a `Procfile` for Heroku-like setups.
+
+## Docker fallback (optional)
+
+If Render's native Python runtime still gives trouble with eventlet or build-time C extensions, you can deploy a Docker image pinned to Python 3.11. There is a `Dockerfile` included as a fallback. To build and run locally:
+
+```powershell
+docker build -t flask-chat-app .
+docker run -p 5000:5000 -e PORT=5000 flask-chat-app
+```
+
+On Render, choose "Docker" as your service type and point it to this repository/branch.
