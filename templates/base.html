@@ -3,69 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure-Chat</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
-    
+    <title>{% block title %}Secure Chat{% endblock %}</title>
+
     <!-- CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    
-    <!-- SocketIO -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
-    
-    <!-- CryptoJS для шифрования -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+    <!-- Socket.IO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js" defer></script>
+
+    <!-- CryptoJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" defer></script>
+
+    {% block head %}
+    <!-- Дополнительные стили/метаданные -->
+    {% endblock %}
 </head>
+
 <body>
     <div class="app-container">
+
         <!-- Header -->
         <header class="header">
-            <div class="header-content">
-                <h1 class="logo">
-                    <span class="logo-icon">🔒</span>
-                    Secure Chat
-                </h1>
-                
-                <div class="header-info">
-                    <span id="online-count" class="online-indicator">
-                        <span class="online-dot"></span>
-                        <span id="online-count-text">0 онлайн</span>
-                    </span>
-                    
-                    {% if session.user_uuid %}
-                    <div class="user-menu">
-                        <span class="username" id="current-username">Гость</span>
-                        <div class="user-dropdown">
-                            <button id="logout-btn" class="btn-logout">Выйти</button>
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
+            {% block header %}
+            <h1>🔒 Secure Chat</h1>
+
+            <!-- ⚙️ Статус шифрования -->
+            <div id="encryption-status" class="encryption-off">
+                Шифрование выключено
             </div>
+            {% endblock %}
         </header>
 
         <!-- Main Content -->
         <main class="main-content">
             {% block content %}
-            <!-- Content will be injected here -->
+            <!-- Контент страницы (чат / группы / формы и т.д.) -->
             {% endblock %}
         </main>
 
         <!-- Footer -->
         <footer class="footer">
             <div class="footer-content">
-                <p>&copy; 2024 Secure Chat App. End-to-End Encrypted.</p>
+                <p>&copy; 2025 Secure Chat. End-to-End Encrypted.</p>
             </div>
         </footer>
     </div>
 
-    <!-- JavaScript -->
-    <script src="{{ url_for('static', filename='js/encryption.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <!-- Глобальные элементы, к которым обращается JS -->
+    <input type="file" id="file-input" style="display: none;">
     
     {% block scripts %}
-    <!-- Page-specific scripts -->
+    <!-- Основные JS -->
+    <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
     {% endblock %}
 </body>
 </html>

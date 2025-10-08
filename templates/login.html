@@ -7,246 +7,166 @@
             <h1>🔒 Secure Chat</h1>
             <p>Приватный end-to-end зашифрованный чат</p>
         </div>
-        
+
         <div class="auth-tabs">
             <button class="tab-btn active" data-tab="join">Присоединиться</button>
             <button class="tab-btn" data-tab="return">Вернуться</button>
         </div>
 
-        <!-- Форма присоединения (новый пользователь) -->
+        <!-- Новая регистрация -->
         <form id="join-form" class="auth-form active">
             <div class="form-group">
-                <label for="join-username">Имя пользователя:</label>
-                <input 
-                    type="text" 
-                    id="join-username" 
-                    placeholder="Введите ваше имя" 
-                    required
-                    maxlength="20"
-                >
-                <small>Будет видно другим участникам</small>
+                <label>Имя пользователя:</label>
+                <input id="join-username" type="text" maxlength="20" required placeholder="Введите имя">
             </div>
-
             <div class="form-group">
-                <label for="join-codeword">Кодовое слово:</label>
-                <input 
-                    type="password" 
-                    id="join-codeword" 
-                    placeholder="Придумайте кодовое слово" 
-                    required
-                >
-                <small>Запомните его для входа в будущем</small>
+                <label>Кодовое слово:</label>
+                <input id="join-codeword" type="password" required placeholder="Придумайте кодовое слово">
             </div>
-
             <div class="form-group">
                 <label class="checkbox-label">
-                    <input type="checkbox" id="join-encryption">
-                    <span class="checkmark"></span>
-                    Включить end-to-end шифрование
+                    <input type="checkbox" id="join-encryption"> Включить end-to-end шифрование
                 </label>
             </div>
-
-            <button type="submit" class="btn-primary btn-full">Присоединиться к чату</button>
+            <button type="submit" class="btn-primary btn-full">Присоединиться</button>
         </form>
 
-        <!-- Форма возвращения (существующий пользователь) -->
+        <!-- Возврат -->
         <form id="return-form" class="auth-form">
             <div class="form-group">
-                <label for="return-uuid">Ваш UUID:</label>
-                <input 
-                    type="text" 
-                    id="return-uuid" 
-                    placeholder="Введите ваш UUID" 
-                    required
-                >
-                <small>Был выдан при первом входе</small>
+                <label>Ваш UUID:</label>
+                <input id="return-uuid" type="text" required placeholder="Введите ваш UUID">
             </div>
-
             <div class="form-group">
-                <label for="return-codeword">Кодовое слово:</label>
-                <input 
-                    type="password" 
-                    id="return-codeword" 
-                    placeholder="Введите ваше кодовое слово" 
-                    required
-                >
+                <label>Кодовое слово:</label>
+                <input id="return-codeword" type="password" required placeholder="Введите кодовое слово">
             </div>
-
             <div class="form-group">
-                <label for="return-username">Имя пользователя (можно изменить):</label>
-                <input 
-                    type="text" 
-                    id="return-username" 
-                    placeholder="Введите новое имя" 
-                    maxlength="20"
-                >
+                <label>Имя (опционально):</label>
+                <input id="return-username" type="text" maxlength="20" placeholder="Новое имя (необязательно)">
             </div>
-
-            <button type="submit" class="btn-primary btn-full">Войти в чат</button>
+            <button type="submit" class="btn-primary btn-full">Войти</button>
         </form>
 
-        <!-- Блок с информацией после регистрации -->
-        <div id="success-block" class="success-block" style="display: none;">
+        <div id="success-block" class="success-block" style="display:none;">
             <div class="success-icon">✅</div>
             <h3>Добро пожаловать!</h3>
-            <div class="user-info">
-                <p><strong>Ваш UUID:</strong></p>
-                <div class="uuid-display" id="user-uuid-display"></div>
-                <small>Сохраните его для будущих входов!</small>
-            </div>
+            <p><strong>Ваш UUID:</strong></p>
+            <div id="user-uuid-display" class="uuid-display"></div>
+            <small>Сохраните его для входа!</small>
             <button id="go-to-chat" class="btn-primary btn-full">Перейти в чат</button>
         </div>
 
-        <!-- Уведомления об ошибках -->
-        <div id="auth-error" class="error-message" style="display: none;"></div>
+        <div id="auth-error" class="error-message" style="display:none;"></div>
     </div>
 
     <div class="auth-features">
-        <h3>Возможности чата:</h3>
+        <h3>Возможности:</h3>
         <ul>
-            <li>🔒 End-to-end шифрование сообщений</li>
-            <li>👥 Создание групповых чатов</li>
-            <li>📎 Обмен файлами до 25 МБ</li>
-            <li>🌐 Работа в реальном времени</li>
-            <li>🔐 Безопасная UUID авторизация</li>
+            <li>🔐 End-to-end шифрование</li>
+            <li>👥 Групповые чаты</li>
+            <li>📎 Файлы до 25 МБ</li>
+            <li>🌐 Реальное время</li>
+            <li>🆔 UUID-авторизация</li>
         </ul>
     </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Переключение между табами
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        const authForms = document.querySelectorAll('.auth-form');
-        
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const tab = this.dataset.tab;
-                
-                // Активируем кнопку
-                tabBtns.forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                
-                // Показываем соответствующую форму
-                authForms.forEach(form => {
-                    form.classList.remove('active');
-                    if (form.id === `${tab}-form`) {
-                        form.classList.add('active');
-                    }
-                });
-            });
-        });
+document.addEventListener('DOMContentLoaded', () => {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const forms = document.querySelectorAll('.auth-form');
 
-        // Обработка формы присоединения
-        document.getElementById('join-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            joinChat();
-        });
-
-        // Обработка формы возвращения
-        document.getElementById('return-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            returnToChat();
-        });
-
-        // Переход в чат после успешной регистрации
-        document.getElementById('go-to-chat').addEventListener('click', function() {
-            window.location.href = '/';
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            forms.forEach(f => f.classList.remove('active'));
+            document.getElementById(`${btn.dataset.tab}-form`).classList.add('active');
         });
     });
 
-    async function joinChat() {
-        const username = document.getElementById('join-username').value.trim();
-        const codeword = document.getElementById('join-codeword').value;
-        
-        if (!username || !codeword) {
-            showError('Заполните все обязательные поля');
-            return;
-        }
+    document.getElementById('join-form').addEventListener('submit', e => {
+        e.preventDefault();
+        joinChat();
+    });
+    document.getElementById('return-form').addEventListener('submit', e => {
+        e.preventDefault();
+        returnToChat();
+    });
+    document.getElementById('go-to-chat').addEventListener('click', () => {
+        window.location.href = '/';
+    });
+});
 
-        try {
-            const response = await fetch('/auth/join', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username: username,
-                    codeword: codeword
-                })
-            });
+async function joinChat() {
+    const username = document.getElementById('join-username').value.trim();
+    const codeword = document.getElementById('join-codeword').value;
 
-            const data = await response.json();
+    if (!username || !codeword) return showError('Заполните все поля');
 
-            if (data.success) {
-                showSuccess(data.user.uuid);
-            } else {
-                showError(data.error);
-            }
-        } catch (error) {
-            showError('Ошибка соединения: ' + error.message);
-        }
-    }
-
-    async function returnToChat() {
-        const uuid = document.getElementById('return-uuid').value.trim();
-        const codeword = document.getElementById('return-codeword').value;
-        const username = document.getElementById('return-username').value.trim();
-
-        if (!uuid || !codeword) {
-            showError('Заполните UUID и кодовое слово');
-            return;
-        }
-
-        try {
-            const response = await fetch('/auth/join', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    uuid: uuid,
-                    codeword: codeword,
-                    username: username || undefined
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                window.location.href = '/';
-            } else {
-                showError(data.error);
-            }
-        } catch (error) {
-            showError('Ошибка соединения: ' + error.message);
-        }
-    }
-
-    function showError(message) {
-        const errorEl = document.getElementById('auth-error');
-        errorEl.textContent = message;
-        errorEl.style.display = 'block';
-        
-        setTimeout(() => {
-            errorEl.style.display = 'none';
-        }, 5000);
-    }
-
-    function showSuccess(uuid) {
-        // Скрываем формы
-        document.querySelectorAll('.auth-form').forEach(form => {
-            form.style.display = 'none';
+    try {
+        const res = await fetch('/auth/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, codeword })
         });
-        document.querySelector('.auth-tabs').style.display = 'none';
-        
-        // Показываем блок успеха
-        document.getElementById('user-uuid-display').textContent = uuid;
-        document.getElementById('success-block').style.display = 'block';
-    }
-</script>
+        const data = await res.json();
 
+        if (data.success) {
+            localStorage.setItem('chat_user', JSON.stringify({
+                uuid: data.user.uuid,
+                username: username,
+                codeword: codeword
+            }));
+            showSuccess(data.user.uuid);
+        } else showError(data.error || 'Ошибка регистрации');
+    } catch (err) {
+        showError('Ошибка соединения: ' + err.message);
+    }
+}
+
+async function returnToChat() {
+    const uuid = document.getElementById('return-uuid').value.trim();
+    const codeword = document.getElementById('return-codeword').value;
+    const username = document.getElementById('return-username').value.trim();
+
+    if (!uuid || !codeword) return showError('Введите UUID и кодовое слово');
+
+    try {
+        const res = await fetch('/auth/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uuid, codeword, username: username || undefined })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            localStorage.setItem('chat_user', JSON.stringify({
+                uuid: uuid,
+                username: username || data.user.username,
+                codeword: codeword
+            }));
+            window.location.href = '/';
+        } else showError(data.error || 'Ошибка входа');
+    } catch (err) {
+        showError('Ошибка соединения: ' + err.message);
+    }
+}
+
+function showError(msg) {
+    const el = document.getElementById('auth-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 4000);
+}
+
+function showSuccess(uuid) {
+    document.querySelectorAll('.auth-form, .auth-tabs').forEach(e => e.style.display = 'none');
+    document.getElementById('user-uuid-display').textContent = uuid;
+    document.getElementById('success-block').style.display = 'block';
+}
+</script>
 {% endblock %}
