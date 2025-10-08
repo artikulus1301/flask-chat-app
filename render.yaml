@@ -3,17 +3,10 @@ services:
     name: flask-chat
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
-  startCommand: "gunicorn --worker-class eventlet -w 1 app:app --bind 0.0.0.0:$PORT"
-    services:
-      - type: web
-        name: flask-chat
-        env: python
-        plan: free
-        buildCommand: pip install -r requirements.txt
-        startCommand: "gunicorn --worker-class eventlet -w 1 app:app --bind 0.0.0.0:$PORT"
-        envVars:
-          - key: SECRET_KEY
-            generateValue: true
-          - key: DATABASE_URL
-            value: sqlite:///chat.db
+    buildCommand: pip install 'setuptools>=68.0.0' wheel && pip install -r requirements.txt
+    startCommand: "gunicorn --worker-class eventlet -w 1 wsgi:app --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:///chat.db
