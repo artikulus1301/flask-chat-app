@@ -1,21 +1,93 @@
-venv/
-env/
-*.pyc
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-instance/chat.db
-*.sqlite3
+# PyInstaller
+*.manifest
+*.spec
 
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Environments
 .env
-.env.local
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
+# OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
+# Application specific
+instance/
+uploads/
+*.db
+*.sqlite3
+*.log
+
+# Cloudinary
+cloudinary_config.json
+
+# Temporary files
+temp/
+tmp/
+
+# Logs
 *.log
 logs/
+
+# SSL
+*.key
+*.cert
+*.pem

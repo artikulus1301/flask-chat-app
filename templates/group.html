@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure-Chat</title>
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- SocketIO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <!-- CryptoJS для шифрования -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+<div class="group-container">
+    <!-- Информация о группе -->
+    <div class="group-header">
+        <div class="group-info">
+            <h1 id="group-name">{{ group.name }}</h1>
+            <p id="group-description">{{ group.description or "Без описания" }}</p>
+            <div class="group-meta">
+                <span class="member-count">
+                    👥 <span id="group-member-count">{{ group.members|length }}</span> участников
+                </span>
+                <span class="group-privacy">
+                    {% if group.is_private %}
+                    🔒 Приватная
+                    {% else %}
+                    🌐 Публичная
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        
+        <div class="group-actions">
+            {% if is_member %}
+            <button id="leave-group-btn" class="btn-danger">Покинуть группу</button>
+            {% else %}
+            <button id="join-group-btn" class="btn-primary">Присоединиться</button>
+            {% endif %}
+            
+            {% if is_creator %}
+            <button id="manage-group-btn" class="btn-secondary">Управление</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="group-chat-layout">
+        <!-- Боковая панель с участниками -->
+        <div class="group-sidebar">
+            <div class="sidebar-section">
+                <h3>Участники</h3>
+                <div class="members-list" id="members-list">
+                    {% for member in group.members %}
+                    <div class="member-item" data-user-id="{{ member.id }}">
+                        <span class="member-avatar">{{ member.username[0]|upper }}</span>
+                        <span class="member-name">{{ member.username }}</span>
+                        {% if member.id == group.created_by %}
+                        <span class="member-role creator">👑</span>
+                        {% endif %}
+                        {% if member.is_online %}
+                        <span class="online-status online"></span>
+                        {% else %}
+                        <span class="online-status offline"></span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Информация о группе -->
+            <div class="sidebar-section">
+                <h3>Информация</h3>
+                <div class="group-details">
+                    <p><strong>Создана:</strong> <span id="group-created">{{ group.created_at.strftime('%d.%m.%Y') }}</span></p>
+                    <p><strong>UUID группы:</strong></p>
+                    <code class="group-uuid">{{ group.uuid }}</code>
+                    <button id="copy-uuid" class="btn-copy" title="Скопировать UUID">
+                        📋
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Основной чат -->
+        <div class="group-chat-area">
+            <!-- Заголовок чата -->
+            <div class="chat-header">
+                <h2>Чат группы "{{ group.name }}"</h2>
+                <div class="chat-info">
+                    <span id="group-typing-indicator"></span>
+                </div>
+            </div>
+
+            <!-- Сообщения -->
+            <div class="messages-container">
+                <div class="messages" id="group-messages">
+                    <div class="empty-state" id="group-empty-state">
+                        <p>Пока нет сообщений в этой группе</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Форма отправки сообщения -->
+            {% if is_member %}
+            <div class="message-input-container">
+                <div class="input-tools">
+                    <button class="btn-tool" id="group-file-upload" title="Загрузить файл">
+                        📎
+                    </button>
+                    <button class="btn-tool" id="group-encryption-toggle" title="Включить шифрование">
+                        🔓
+                    </button>
+                </div>
+                
+                <div class="message-input-wrapper">
+                    <textarea 
+                        id="group-message-input" 
+                        placeholder="Введите сообщение для группы..." 
+                        rows="1"
+                        maxlength="2000"
+                        {% if not is_member %}disabled{% endif %}
+                    ></textarea>
+                    <button id="group-send-btn" class="btn-send" {% if not is_member %}disabled{% endif %}>
+                        ➤
+                    </button>
+                </div>
+                
+                <div class="input-status">
+                    <span id="group-char-count">0/2000</span>
+                    <span id="group-encryption-status" class="encryption-off">Шифрование выключено</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="join-prompt">
+                <p>Присоединитесь к группе, чтобы отправлять сообщения</p>
+                <button id="prompt-join-btn" class="btn-primary">Присоединиться</button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно управления группой -->
+{% if is_creator %}
+<div id="manage-group-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Управление группой</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="manage-group-form">
+                <div class="form-group">
+                    <label for="edit-group-name">Название группы:</label>
+                    <input type="text" id="edit-group-name" value="{{ group.name }}" maxlength="100">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-group-description">Описание:</label>
+                    <textarea id="edit-group-description" rows="3" maxlength="500">{{ group.description or '' }}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="edit-group-private" {% if group.is_private %}checked{% endif %}>
+                        <span class="checkmark"></span>
+                        Приватная группа
+                    </label>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn-danger" id="delete-group-btn">Удалить группу</button>
+                    <button type="submit" class="btn-primary">Сохранить изменения</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Скрытый input для загрузки файлов -->
+<input type="file" id="group-file-input" style="display: none;" multiple>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const GROUP_DATA = {
+        id: {{ group.id }},
+        uuid: "{{ group.uuid }}",
+        name: "{{ group.name }}",
+        is_private: {{ 'true' if group.is_private else 'false' }},
+        is_member: {{ 'true' if is_member else 'false' }},
+        is_creator: {{ 'true' if is_creator else 'false' }},
+        created_by: {{ group.created_by }}
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!CURRENT_USER.uuid) {
+            window.location.href = '/auth';
+            return;
+        }
+
+        initializeGroupChat();
+    });
+
+    function initializeGroupChat() {
+        // Инициализация группового чата
+        connectToGroup();
+        loadGroupMessages();
+        setupGroupEventListeners();
+    }
+
+    function connectToGroup() {
+        if (GROUP_DATA.is_member) {
+            socket.emit('join_room', { group_uuid: GROUP_DATA.uuid });
+        }
+    }
+
+    function setupGroupEventListeners() {
+        // Кнопка присоединения/выхода
+        if (GROUP_DATA.is_member) {
+            document.getElementById('leave-group-btn').addEventListener('click', leaveGroup);
+        } else {
+            document.getElementById('join-group-btn').addEventListener('click', joinGroup);
+            document.getElementById('prompt-join-btn').addEventListener('click', joinGroup);
+        }
+
+        // Управление группой (для создателя)
+        if (GROUP_DATA.is_creator) {
+            document.getElementById('manage-group-btn').addEventListener('click', openManageModal);
+            document.getElementById('manage-group-form').addEventListener('submit', updateGroup);
+            document.getElementById('delete-group-btn').addEventListener('click', deleteGroup);
+        }
+
+        // Отправка сообщений
+        if (GROUP_DATA.is_member) {
+            document.getElementById('group-send-btn').addEventListener('click', sendGroupMessage);
+            document.getElementById('group-message-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendGroupMessage();
+                }
+            });
+
+            // Загрузка файлов
+            document.getElementById('group-file-upload').addEventListener('click', function() {
+                document.getElementById('group-file-input').click();
+            });
+        }
+
+        // Копирование UUID
+        document.getElementById('copy-uuid').addEventListener('click', function() {
+            navigator.clipboard.writeText(GROUP_DATA.uuid).then(function() {
+                alert('UUID скопирован в буфер обмена');
+            });
+        });
+    }
+
+    async function joinGroup() {
+        try {
+            const response = await fetch(`/groups/${GROUP_DATA.uuid}/join`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        } catch (error) {
+            alert('Ошибка соединения: ' + error.message);
+        }
+    }
+
+    async function leaveGroup() {
+        if (!confirm('Вы уверены, что хотите покинуть группу?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/groups/${GROUP_DATA.uuid}/leave`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                window.location.href = '/';
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        } catch (error) {
+            alert('Ошибка соединения: ' + error.message);
+        }
+    }
+</script>
+</body>
+</html>
