@@ -3,10 +3,11 @@ from flask import Flask, redirect, jsonify, session, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
 
+# Загружаем переменные окружения до импорта других модулей
+load_dotenv()
+
 from extensions import db, socketio
 from config import ProductionConfig, DevelopmentConfig
-
-load_dotenv()
 
 
 def create_app() -> Flask:
@@ -33,6 +34,11 @@ def create_app() -> Flask:
         SESSION_COOKIE_SECURE=env == "production",
         SESSION_COOKIE_SAMESITE='Lax',
         PERMANENT_SESSION_LIFETIME=86400,  # 24 часа
+        # Оптимизация для PostgreSQL
+        SQLALCHEMY_ENGINE_OPTIONS={
+            "pool_recycle": 300,
+            "pool_pre_ping": True,
+        }
     )
 
     # --- Каталоги ---
@@ -44,13 +50,24 @@ def create_app() -> Flask:
     # --- Инициализация расширений ---
     db.init_app(app)
 
+    # Конфигурация Socket.IO для production
     redis_url = os.getenv("REDIS_URL")
     socketio_kwargs = {
         "cors_allowed_origins": "*",
-        "async_mode": "eventlet" if env == "production" else None,
+        "logger": False,
+        "engineio_logger": False,
+        "ping_timeout": 60,
+        "ping_interval": 25,
     }
+    
+    # Всегда используем eventlet для production
+    socketio_kwargs["async_mode"] = "eventlet"
+    
     if redis_url:
         socketio_kwargs["message_queue"] = redis_url
+        print("✅ Redis configured for Socket.IO")
+    else:
+        print("⚠️ Redis not configured, using in-memory message queue")
 
     socketio.init_app(app, **socketio_kwargs)
 
@@ -88,11 +105,12 @@ def create_app() -> Flask:
         # Инициализация socket.io обработчиков
         init_socket_handlers(socketio, db)
 
-        # --- Создание БД только в режиме разработки ---
-        if app.config.get("DEBUG", False):
+        # --- Создание БД ---
+        try:
             db.create_all()
-            if app.config.get("DEBUG"):
-                print("✅ Database tables created")
+            print("✅ Database tables checked/created")
+        except Exception as e:
+            print(f"⚠️ Database creation warning: {e}")
 
     return app
 
@@ -133,7 +151,7 @@ def health():
     return jsonify({
         "status": "ok", 
         "environment": os.getenv("FLASK_ENV", "development"),
-        "debug": app.config.get("DEBUG", False)
+        "database": "connected" if db.engine else "disconnected"
     })
 
 
@@ -151,45 +169,32 @@ def check_user_session():
                     "user": user.to_dict()
                 })
         except Exception as e:
-            if app.config.get("DEBUG"):
-                print(f"Error checking user session: {e}")
+            print(f"Error checking user session: {e}")
     
     return jsonify({"authenticated": False})
 
 
+# Для локальной разработки
 if __name__ == "__main__":
     debug_mode = app.config.get("DEBUG", True)
     port = int(os.getenv("PORT", 5000))
 
-    if debug_mode:
-        print("\n" + "="*50)
-        print("🚀 FLASK CHAT APPLICATION")
-        print("="*50)
-        
-        print("\n✅ Registered routes:")
-        for rule in sorted(app.url_map.iter_rules(), key=lambda r: r.rule):
-            methods = ",".join(sorted(rule.methods - {"HEAD", "OPTIONS"}))
-            print(f"  {rule.rule:30s} → {rule.endpoint:30s} [{methods}]")
-
-        print(f"\n📊 Server Info:")
-        print(f"  Environment: {os.getenv('FLASK_ENV', 'development')}")
-        print(f"  Debug mode: {debug_mode}")
-        print(f"  Port: {port}")
-        print(f"  Host: {'127.0.0.1' if debug_mode else '0.0.0.0'}")
-        print(f"  Database: {app.config.get('SQLALCHEMY_DATABASE_URI', 'Unknown')}")
-        
-        print(f"\n🔐 Authentication:")
-        print(f"  Protected routes: /chat/, /api/")
-        print(f"  Login page: /auth/")
-        print(f"  Session check: /api/user/check")
-        
-        print(f"\n🌐 Starting server at: http://127.0.0.1:{port}")
-        print("="*50 + "\n")
+    print("\n" + "="*50)
+    print("🚀 FLASK CHAT APPLICATION")
+    print("="*50)
+    
+    print(f"\n📊 Server Info:")
+    print(f"  Environment: {os.getenv('FLASK_ENV', 'development')}")
+    print(f"  Debug mode: {debug_mode}")
+    print(f"  Port: {port}")
+    
+    print(f"\n🌐 Starting server at: http://127.0.0.1:{port}")
+    print("="*50 + "\n")
 
     socketio.run(
         app,
         host="127.0.0.1" if debug_mode else "0.0.0.0",
         port=port,
         debug=debug_mode,
-        allow_unsafe_werkzeug=True,
+        use_reloader=debug_mode
     )
