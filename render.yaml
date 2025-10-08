@@ -4,11 +4,16 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --worker-class eventlet -w 1 app:app
-    envVars:
-      - key: SECRET_KEY
-        generateValue: true
-      - key: DATABASE_URL
-        value: sqlite:///chat.db
-      # Note: SQLite is file-based and not suitable for multi-instance production.
-      # For deployment consider PostgreSQL/MySQL and set DATABASE_URL accordingly.
+  startCommand: "gunicorn --worker-class eventlet -w 1 app:app --bind 0.0.0.0:$PORT"
+    services:
+      - type: web
+        name: flask-chat
+        env: python
+        plan: free
+        buildCommand: pip install -r requirements.txt
+        startCommand: "gunicorn --worker-class eventlet -w 1 app:app --bind 0.0.0.0:$PORT"
+        envVars:
+          - key: SECRET_KEY
+            generateValue: true
+          - key: DATABASE_URL
+            value: sqlite:///chat.db
